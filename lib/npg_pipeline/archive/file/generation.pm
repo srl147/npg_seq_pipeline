@@ -30,7 +30,7 @@ sub create_empty_fastq_files {
 
   foreach my $position ( $self->positions() ) {
     push @files, catfile($apath, $self->fq_filename($position, undef, $forward_end));
-    if ( $self->is_paired_read() ) {
+    if ( $self->is_paired_read() && !$self->_chromium_single_cell ) {
       push @files, catfile($apath, $self->fq_filename($position, undef, 2));
     }
     if ( $self->is_indexed() && $self->is_multiplexed_lane($position) ) {
@@ -38,7 +38,7 @@ sub create_empty_fastq_files {
       my $lpath = $self->lane_archive_path($position);
       foreach my $tag_index ( @{ $self->get_tag_index_list( $position ) } ) {
         push @files, catfile($lpath, $self->fq_filename($position, $tag_index, 1));
-        if ( $self->is_paired_read() ) {
+        if ( $self->is_paired_read() && !$self->_chromium_single_cell ) {
           push @files, catfile($lpath, $self->fq_filename($position, $tag_index, 2));
         }
       }

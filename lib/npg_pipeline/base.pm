@@ -633,6 +633,42 @@ sub status_files_path {
   return join q[/], $apath, 'status';
 }
 
+has q{_chromium_single_cell} => (
+                             isa        => q{Bool},
+                             is         => q{rw},
+                             lazy_build => 1,
+                            );
+sub _build__chromium_single_cell {
+  my $self = shift;
+
+  $self->is_indexed;
+  my @i = $self->reads_indexed;
+  my ($reads, $reads_indexed) = (0, 0);
+  ## no critic (ControlStructures::ProhibitPostfixControls)
+  foreach (@i) { $reads++; $reads_indexed++ if $_; }
+
+  # we expect four reads, two of which are indexed
+  return 0 unless ($reads == 4 && $reads_indexed == 2);
+
+  # the library type should be Chromium single cell
+  my $is_chromium_single_cell = 0;
+  my $d = $self->lims;
+  warn q{library_type=}.$d->library_type if $d->library_type;
+  if ($d->library_type && $d->library_type =~ /^Chromium\ single\ cell/smx) {
+    $is_chromium_single_cell = 1;
+  }
+  foreach $d ($self->lims->descendants()) {
+    warn q{library_type=}.$d->library_type if $d->library_type;
+    if ($d->library_type && $d->library_type =~ /^Chromium\ single\ cell/smx) {
+      $is_chromium_single_cell = 1;
+      last;
+    }
+  }
+  warn qq{is_chromium_single_cell=$is_chromium_single_cell};
+
+  return $is_chromium_single_cell;
+}
+
 no Moose;
 __PACKAGE__->meta->make_immutable;
 1;

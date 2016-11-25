@@ -106,7 +106,7 @@ sub run_cluster_count_check {
    my $spatial_filter_processed = $self->_spatial_filter_processed_count();
    my $spatial_filter_failed    = $self->_spatial_filter_failed_count();
    if (defined $spatial_filter_processed) {
-     if($self->is_paired_read()){
+     if($self->is_paired_read() && !$self->_chromium_single_cell){
        $spatial_filter_processed /= 2;
        $spatial_filter_failed /= 2;
      }
@@ -132,7 +132,7 @@ sub run_cluster_count_check {
    }else{
       $total_bam_cluster_count += $self->_bam_cluster_count_total({});
    }
-   if($self->is_paired_read()){
+   if($self->is_paired_read() && !$self->_chromium_single_cell){
        $total_bam_cluster_count /= 2;
     }
 
