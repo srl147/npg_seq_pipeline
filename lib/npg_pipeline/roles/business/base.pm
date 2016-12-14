@@ -154,6 +154,104 @@ sub is_multiplexed_lane {
   return any {$_ == $position} @{$self->multiplexed_lanes};
 }
 
+=head2 chromium_genome_lanes
+
+An array of positions that correspond to, if the run is indexed, chromium genome/exome lanes.
+Empty array for a not indexed run.
+
+=cut
+
+has q{chromium_genome_lanes} => (isa        => q{ArrayRef},
+                                      is         => q{ro},
+                                      metaclass  => q{NoGetopt},
+                                      lazy_build => 1,);
+
+sub _build_chromium_genome_lanes {
+  my ($self) = @_;
+  if (!$self->is_indexed) {
+    return [];
+  }
+  my @lanes = ();
+  my $alims = $self->lims->children_ia;
+  for my $p ($self->positions()) {
+    my $lane_lims = $alims->{$p};
+    my @library_types = $lane_lims->library_types(0);
+    my $count = 0;
+    map {$count++} grep {$_ =~ /^Chromium\ (genome|exome)/smx} @library_types;
+    if ($count) {
+      if (scalar(@library_types) > 1) {
+        croak 'Multiple library types including chromium genome/exome for position '.$p;
+      } else {
+        push(@lanes, $p);
+      }
+    }
+  }
+  return \@lanes;
+}
+
+=head2 is_chromium_genome_lane
+
+Boolean flag, true if the run is indexed, the lane is a pool amd the library type is chromium genome or chromium exome
+
+=cut
+
+sub is_chromium_genome_lane {
+  my ($self, $position) = @_;
+  if (!$position) {
+    croak 'Position not given';
+  }
+  return any {$_ == $position} @{$self->chromium_genome_lanes};
+}
+
+=head2 chromium_single_cell_lanes
+
+An array of positions that correspond to, if the run is indexed, chromium single cell lanes.
+Empty array for a not indexed run.
+
+=cut
+
+has q{chromium_single_cell_lanes} => (isa        => q{ArrayRef},
+                                      is         => q{ro},
+                                      metaclass  => q{NoGetopt},
+                                      lazy_build => 1,);
+
+sub _build_chromium_single_cell_lanes {
+  my ($self) = @_;
+  if (!$self->is_indexed) {
+    return [];
+  }
+  my @lanes = ();
+  my $alims = $self->lims->children_ia;
+  for my $p ($self->positions()) {
+    my $lane_lims = $alims->{$p};
+    my @library_types = $lane_lims->library_types(0);
+    my $count = 0;
+    map {$count++} grep {$_ =~ /^Chromium\ single\ cell/smx} @library_types;
+    if ($count) {
+      if (scalar(@library_types) > 1) {
+        croak 'Multiple library types including chromium genome/exome for position '.$p;
+      } else {
+        push(@lanes, $p);
+      }
+    }
+  }
+  return \@lanes;
+}
+
+=head2 is_chromium_single_cell_lane
+
+Boolean flag, true if the run is indexed, the lane is a pool amd the library type is chromium single cell
+
+=cut
+
+sub is_chromium_single_cell_lane {
+  my ($self, $position) = @_;
+  if (!$position) {
+    croak 'Position not given';
+  }
+  return any {$_ == $position} @{$self->chromium_single_cell_lanes};
+}
+
 sub _lims4lane {
   my ($self, $position) = @_;
   if (!$position) {

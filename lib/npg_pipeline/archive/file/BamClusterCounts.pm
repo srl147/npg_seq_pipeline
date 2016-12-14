@@ -97,6 +97,8 @@ method which goes checking the cluster counts
 sub run_cluster_count_check {
    my $self = shift;
 
+   my $position = $self->position();
+
    $self->log('Checking cluster counts are consistent');
    my $max_cluster_count = $self->_bustard_raw_cluster_count();
    $self->log(qq{Raw cluster count: $max_cluster_count});
@@ -106,7 +108,7 @@ sub run_cluster_count_check {
    my $spatial_filter_processed = $self->_spatial_filter_processed_count();
    my $spatial_filter_failed    = $self->_spatial_filter_failed_count();
    if (defined $spatial_filter_processed) {
-     if($self->is_paired_read() && !$self->_chromium_single_cell){
+     if($self->is_paired_read() && !$self->is_chromium_single_cell_lane($position)){
        $spatial_filter_processed /= 2;
        $spatial_filter_failed /= 2;
      }
@@ -127,12 +129,12 @@ sub run_cluster_count_check {
    }
 
    my $total_bam_cluster_count;
-   if ( $self->is_multiplexed_lane($self->position() ) ) {
+   if ( $self->is_multiplexed_lane($position ) ) {
       $total_bam_cluster_count += $self->_bam_cluster_count_total({plex=>1});
    }else{
       $total_bam_cluster_count += $self->_bam_cluster_count_total({});
    }
-   if($self->is_paired_read() && !$self->_chromium_single_cell){
+   if($self->is_paired_read() && !$self->is_chromium_single_cell_lane($position)){
        $total_bam_cluster_count /= 2;
     }
 

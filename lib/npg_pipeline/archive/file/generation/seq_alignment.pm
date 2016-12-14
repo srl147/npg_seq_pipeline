@@ -229,7 +229,7 @@ sub _lsf_alignment_command { ## no critic (Subroutines::ProhibitExcessComplexity
 
   my $do_rna = $self->_do_rna_analysis($l);
 
-  my $hs_bwa = (($self->is_paired_read && !$self->_chromium_single_cell)? 'bwa_aln' : 'bwa_aln_se');
+  my $hs_bwa = (($self->is_paired_read && !$self->is_chromium_single_cell_lane($position))? 'bwa_aln' : 'bwa_aln_se');
   # continue to use the "aln" algorithm from bwa for these older chemistries (where read length <= 100bp) unless GCLP
   my $bwa = ($self->gclp or $self->is_hiseqx_run or $self->_has_newer_flowcell or any {$_ >= $FORCE_BWAMEM_MIN_READ_CYCLES } $self->read_cycle_counts)
             ? 'bwa_mem'
@@ -348,7 +348,7 @@ sub _lsf_alignment_command { ## no critic (Subroutines::ProhibitExcessComplexity
   ####################
   $self->log(q[Using p4]);
   if($l->contains_nonconsented_human) { $self->log(q[  nonconsented_humansplit]) }
-  if(not $self->is_paired_read || $self->_chromium_single_cell) { $self->log(q[  single-end]) }
+  if(not $self->is_paired_read || $self->is_chromium_single_cell_lane($position)) { $self->log(q[  single-end]) }
   $self->log(q[  do_target_alignment is ] . ($do_target_alignment? q[true]: q[false]));
   $self->log(q[  spike_tag is ] . ($spike_tag? q[true]: q[false]));
   $self->log(q[  human_split is ] . $human_split);
@@ -370,7 +370,7 @@ sub _lsf_alignment_command { ## no critic (Subroutines::ProhibitExcessComplexity
                            $bait_stats_flag,
                            $spike_splicing, # empty unless this is the spike tag
                          ),
-                         (not $self->is_paired_read || $self->_chromium_single_cell) ? q(-nullkeys bwa_mem_p_flag) : (),
+                         (not $self->is_paired_read || $self->is_chromium_single_cell_lane($position)) ? q(-nullkeys bwa_mem_p_flag) : (),
                          (@no_tgt_aln_flags), # empty unless there is no target alignment
                          q{$}.q{(dirname $}.q{(dirname $}.q{(readlink -f $}.q{(which vtfp.pl))))/data/vtlib/alignment_wtsi_stage2_}.$nchs_template_label.q{template.json},
                          qq(> run_$name_root.json),
