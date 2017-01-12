@@ -248,9 +248,7 @@ sub _should_run {
     $init_hash->{'qc_report_dir'} = $self->_get_rpt_qc_report_dir($qc_report_dir_key);
   }
   if (($qc =~ /^insert_size$/smx)) {
-    if ($self->{is_paired_read} && !$self->_chromium_single_cell) {
-      $init_hash->{'is_paired_read'} = q{1};
-    } else {
+    if ($self->is_chromium_single_cell_lane($position)) {
       $init_hash->{'is_paired_read'} = q{0};
     }
   }
