@@ -386,9 +386,6 @@ sub _generate_command_params {
     }
   }
 
-  my @chromium_genome_lanes = @{$self->chromium_genome_lanes()};
-  $self->log( q{chromium genome lanes [} . join(",",@chromium_genome_lanes) . q{]});
-
   if($self->is_chromium_genome_lane($position)) {
     my @read_cycle_counts = $self->read_cycle_counts;
     if(scalar(@read_cycle_counts) == 4) {
@@ -437,9 +434,6 @@ sub _generate_command_params {
       $p4_params{$i2b_flag_map{q/FINAL_1/}} = $final;
     }
   }
-
-  my @chromium_single_cell_lanes = @{$self->chromium_single_cell_lanes()};
-  $self->log( q{chromium single_cell lanes [} . join(",",@chromium_single_cell_lanes) . q{]});
 
   if($self->is_chromium_single_cell_lane($position)) {
     my @read_cycle_counts = $self->read_cycle_counts;
