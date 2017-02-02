@@ -350,13 +350,15 @@ sub _generate_command_params {
 
       my($first, $final) = $self->read1_cycle_range();
       if ($index_read == 1) {
-        $p4_params{$i2b_flag_map{q/BC_READ/}} = $p4_params{$i2b_flag_map{q/SEC_BC_READ/}} = 1;
         $index_start += ($first-1);
         $index_end += ($first-1);
-        $p4_params{$i2b_flag_map{q/FIRST_INDEX_0/}} = $index_start;
-        $p4_params{$i2b_flag_map{q/FINAL_INDEX_0/}} = $index_end;
-        $p4_params{$i2b_flag_map{q/FIRST_INDEX_1/}} = $first;
-        $p4_params{$i2b_flag_map{q/FINAL_INDEX_1/}} = $index_start-1;
+        $p4_params{$i2b_flag_map{q/BC_READ/}} = q{1,1};
+        $p4_params{$i2b_flag_map{q/FIRST_INDEX_0/}} = $first;
+        $p4_params{$i2b_flag_map{q/FINAL_INDEX_0/}} = $index_start-1;
+        $p4_params{$i2b_flag_map{q/FIRST_INDEX_0/}} .= qq{,$index_start};
+        $p4_params{$i2b_flag_map{q/FINAL_INDEX_0/}} .= qq{,$index_end};
+        $p4_params{$i2b_flag_map{q/BC_SEQ/}} = q{br,BC};
+        $p4_params{$i2b_flag_map{q/BC_QUAL/}} = q{qr,QT};
         $p4_params{$i2b_flag_map{q/FIRST_0/}} = $index_end+1;
         $p4_params{$i2b_flag_map{q/FINAL_0/}} = $final;
         if ($self->is_paired_read()) {
@@ -365,24 +367,24 @@ sub _generate_command_params {
           $p4_params{$i2b_flag_map{q/FINAL_1/}} = $final;
         }
       } elsif ($index_read == 2) {
-        $p4_params{$i2b_flag_map{q/BC_READ/}} = $p4_params{$i2b_flag_map{q/SEC_BC_READ/}} = 2;
         $self->is_paired_read() or croak "Inline index read (2) does not exist\n";
         $p4_params{$i2b_flag_map{q/FIRST_0/}} = $first;
         $p4_params{$i2b_flag_map{q/FINAL_0/}} = $final;
         ($first, $final) = $self->read2_cycle_range();
         $index_start += ($first-1);
         $index_end += ($first-1);
-        $p4_params{$i2b_flag_map{q/FIRST_INDEX_0/}} = $index_start;
-        $p4_params{$i2b_flag_map{q/FINAL_INDEX_0/}} = $index_end;
-        $p4_params{$i2b_flag_map{q/FIRST_INDEX_1/}} = $first;
-        $p4_params{$i2b_flag_map{q/FINAL_INDEX_1/}} = $index_start-1;
+        $p4_params{$i2b_flag_map{q/BC_READ/}} = q{2,2};
+        $p4_params{$i2b_flag_map{q/FIRST_INDEX_0/}} = $first;
+        $p4_params{$i2b_flag_map{q/FINAL_INDEX_0/}} = $index_start-1;
+        $p4_params{$i2b_flag_map{q/FIRST_INDEX_0/}} .= qq{,$index_start};
+        $p4_params{$i2b_flag_map{q/FINAL_INDEX_0/}} .= qq{,$index_end};
+        $p4_params{$i2b_flag_map{q/BC_SEQ/}} = q{br,BC};
+        $p4_params{$i2b_flag_map{q/BC_QUAL/}} = q{qr,QT};
         $p4_params{$i2b_flag_map{q/FIRST_1/}} = $index_end+1;
         $p4_params{$i2b_flag_map{q/FINAL_1/}} = $final;
       } else {
         croak "Invalid inline index read ($index_read)\n";
       }
-      $p4_params{$i2b_flag_map{q/SEC_BC_SEQ/}} = q{br};
-      $p4_params{$i2b_flag_map{q/SEC_BC_QUAL/}} = q{qr};
     }
   }
 
