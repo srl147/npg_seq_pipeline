@@ -1,6 +1,8 @@
 LIST OF CHANGES
 ---------------
 
+ - fix p4 stage 2 (seq_alignment) warn rather than croak when multiple references for tag 0
+
 release 51.9
  - p4stage2 speed-up by caching references
  - p4stage2 errors in getting a reference made fatal
