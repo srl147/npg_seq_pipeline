@@ -22,9 +22,10 @@ Readonly::Scalar my $NUM_SLOTS                    => q(8,16);
 Readonly::Scalar my $MEMORY                       => q{12000}; # memory in megabytes
 Readonly::Scalar my $FS_RESOURCE                  => 4; # LSF resource counter to control access to staging area file system
 
-Readonly::Scalar my $V2_CELL_BARCODE_LENGTH       => 16; # 10X cell barcode length for v2 chemistry
-Readonly::Scalar my $V2_RANDOM_SEQUENCE_LENGTH    =>  7; # 10X random sequence for v2 (genome/exome) chemistry
-Readonly::Scalar my $V2_MOLECULAR_BARCODE_LENGTH  => 10; # 10X molecular barcode length for v2 (single cell) chemistry
+Readonly::Scalar my $V2_CELL_BARCODE_LENGTH       => 16;    # 10X cell barcode length for v2 chemistry
+Readonly::Scalar my $V2_RANDOM_SEQUENCE_LENGTH    =>  7;    # 10X random sequence for v2 (genome/exome) chemistry
+Readonly::Scalar my $V2_MOLECULAR_BARCODE_LENGTH  => 10;    # 10X molecular barcode length for v2 (single cell) chemistry
+Readonly::Scalar my $V2_MIN_RUN_ID                => 22000; # 10X minimum run id for v2 (single cell) chemistry
 
 sub generate {
   my ( $self, $arg_refs ) = @_;
@@ -439,7 +440,70 @@ sub _generate_command_params {
 
   if($self->is_chromium_single_cell_lane($position)) {
     my @read_cycle_counts = $self->read_cycle_counts;
-    if(scalar(@read_cycle_counts) == 4) {
+    if(($id_run > $V2_MIN_RUN_ID) || (scalar(@read_cycle_counts) == 3)) {
+      # if the run id is larger than a threshold OR there are 3 reads this is the Single Cell 3' v2 chemistry
+      # read 1 contains the cell barcode and the molecular barcode (UMI), index 1 is the standard barcode, index 2 is optional and read 2 is the transcript
+      # create a single-ended bam file containing the transcript, the sequence and quality values for all other reads are placed in named tags
+      # the name of quality tag for the cell and molecular barcodes are CY and UY
+      # for now hardcode the lengths of the cell barcode (16) and the molecular barcode (10)
+      # any remaing bases in read 1 after the cell and molecular barcodes and are placed in tags TR and TQ
+      $self->log(q{P4 stage1 analysis of a chromium single cell v2 lane});
+      # forward read, the cell barcode, the molecular barcode and any remaining bases
+      my($first, $final) = $self->read1_cycle_range();
+      # the raw (uncorrected) cell barcode tags CR/CY
+      my $first_base = $first;
+      my $final_base = $first_base + $V2_CELL_BARCODE_LENGTH - 1;
+      my $first_index = qq{$first_base};
+      my $final_index = qq{$final_base};
+      my $bc_seq = q{CR};
+      my $bc_qual = qq{CY};
+      # the raw (uncorrectd) molecular barcode tags UR/UY
+      $first_base += $V2_CELL_BARCODE_LENGTH;
+      $final_base += $V2_MOLECULAR_BARCODE_LENGTH;
+      $first_index .= q{,}.qq{$first_base};
+      $final_index .= q{,}.qq{$final_base};
+      $bc_seq .= q{,UR};
+      $bc_qual .= qq{,UY};
+      # any remaining bases
+      $first_base += $V2_MOLECULAR_BARCODE_LENGTH;
+      $final_base = $final;
+      if($first_base <= $final_base) {
+        $first_index .= q{,}.qq{$first_base};
+        $final_index .= q{,}.qq{$final_base};
+        $bc_seq .= q{,TR};
+        $bc_qual .= qq{,TQ};
+      }
+      # index read, the standard barcode tags BC/QT
+      $first += $read_cycle_counts[0];
+      $final += $read_cycle_counts[1];
+      $first_index .= q{,}.qq{$first};
+      $final_index .= q{,}.qq{$final};
+      $bc_seq .= q{,BC};
+      $bc_qual .= qq{,QT};
+      # an optional second index read, the standard barcode tags BC/QT
+      if(scalar(@read_cycle_counts) == 4) {
+        $first += $read_cycle_counts[1];
+        $final += $read_cycle_counts[2];
+        $first_index .= q{,}.qq{$first};
+        $final_index .= q{,}.qq{$final};
+        $bc_seq .= q{,BC};
+        $bc_qual .= qq{,QT};
+      }
+      $p4_params{$i2b_flag_map{q/FIRST_INDEX_0/}} = $first_index;
+      $p4_params{$i2b_flag_map{q/FINAL_INDEX_0/}} = $final_index;
+      $p4_params{$i2b_flag_map{q/BC_SEQ/}} = $bc_seq;
+      $p4_params{$i2b_flag_map{q/BC_QUAL/}} = $bc_qual;
+      # reverse read, the transcript
+      if(scalar(@read_cycle_counts) == 4) {
+        $first += $read_cycle_counts[2];
+        $final += $read_cycle_counts[3];
+      } else {
+        $first += $read_cycle_counts[1];
+        $final += $read_cycle_counts[2];
+      }
+      $p4_params{$i2b_flag_map{q/FIRST_0/}} = $first;
+      $p4_params{$i2b_flag_map{q/FINAL_0/}} = $final;
+    } elsif(scalar(@read_cycle_counts) == 4) {
       # if there are 4 reads this is the Single Cell 3' v1 chemistry (98+14+8+10)
       # read 1 is the transcript, index 1 is the cell barcode, index 2 is the sample barcode and read2 is the molecular barcode (UMI)
       # create a single-ended bam file containing the transcript, the sequence and quality values for all other reads are placed in named tags
@@ -475,55 +539,6 @@ sub _generate_command_params {
       $p4_params{$i2b_flag_map{q/FINAL_INDEX_0/}} = $final_index;
       $p4_params{$i2b_flag_map{q/BC_SEQ/}} = $bc_seq;
       $p4_params{$i2b_flag_map{q/BC_QUAL/}} = $bc_qual;
-    }elsif(scalar(@read_cycle_counts) == 3) {
-      # if there are 3 reads this is the Single Cell 3' v2 chemistry (26+8+98)
-      # read 1 contains the cell barcode and the molecular barcode (UMI), index 1 is the standard barcode and read 2 is the transcript
-      # create a single-ended bam file containing the transcript, the sequence and quality values for all other reads are placed in named tags
-      # the name of quality tag for the cell and molecular barcodes are CY and UY
-      # for now hardcode the lengths of the cell barcode (16) and the molecular barcode (10)
-      # any remaing bases in read 1 after the cell and molecular barcodes and are placed in tags TR and TQ
-      $self->log(q{P4 stage1 analysis of a chromium single cell v2 lane});
-      # forward read, the cell barcode, the molecular barcode and any remaining bases
-      my($first, $final) = $self->read1_cycle_range();
-      # the raw (uncorrected) cell barcode tags CR/CY
-      my $first_base = $first;
-      my $final_base = $first_base + $V2_CELL_BARCODE_LENGTH - 1;
-      my $first_index = qq{$first_base};
-      my $final_index = qq{$final_base};
-      my $bc_seq = q{CR};
-      my $bc_qual = qq{CY};
-      # the raw (uncorrectd) molecular barcode tags UR/UY
-      $first_base += $V2_CELL_BARCODE_LENGTH;
-      $final_base += $V2_MOLECULAR_BARCODE_LENGTH;
-      $first_index .= q{,}.qq{$first_base};
-      $final_index .= q{,}.qq{$final_base};
-      $bc_seq .= q{,UR};
-      $bc_qual .= qq{,UY};
-      # any remaining bases
-      $first_base += $V2_MOLECULAR_BARCODE_LENGTH;
-      $final_base = $final;
-      if($first_base <= $final_base ) {
-        $first_index .= q{,}.qq{$first_base};
-        $final_index .= q{,}.qq{$final_base};
-        $bc_seq .= q{,TR};
-        $bc_qual .= qq{,TQ};
-      }
-      # index read, the standard barcode tags BC/QT
-      $first += $read_cycle_counts[0];
-      $final += $read_cycle_counts[1];
-      $first_index .= q{,}.qq{$first};
-      $final_index .= q{,}.qq{$final};
-      $bc_seq .= q{,BC};
-      $bc_qual .= qq{,QT};
-      $p4_params{$i2b_flag_map{q/FIRST_INDEX_0/}} = $first_index;
-      $p4_params{$i2b_flag_map{q/FINAL_INDEX_0/}} = $final_index;
-      $p4_params{$i2b_flag_map{q/BC_SEQ/}} = $bc_seq;
-      $p4_params{$i2b_flag_map{q/BC_QUAL/}} = $bc_qual;
-      # reverse read, the transcript
-      $first += $read_cycle_counts[1];
-      $final += $read_cycle_counts[2];
-      $p4_params{$i2b_flag_map{q/FIRST_0/}} = $first;
-      $p4_params{$i2b_flag_map{q/FINAL_0/}} = $final;
     }
   }
 
