@@ -1,8 +1,20 @@
 LIST OF CHANGES
 ---------------
 
+release 51.11.1
+ - Handle dual indexes (create new format lane tag files)
+ - remove remaining broken provisions for xml LIMs driver 
+ - use the new log publisher
+ - now allows XA/Y-split with no target alignment
+
+release 51.11.0
+ - added support for RNA analysis/quantification using STAR and salmon
+ - STAR alignment jobs get more memory using bmod after seq_alignment jobs have been submitted.
+ - removed unneeded coordinate sort and duplicate marking when there is no alignment to a target reference
+
 release 51.10.3
  - no alignments for chromium libraries
+ - seq_alignment to do_rna analysis regardless of the organism specified (other conditions stay in place)
 
 release 51.10.2
  - use bwa aln for human split with tophat target alignment
