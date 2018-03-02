@@ -1,6 +1,8 @@
 LIST OF CHANGES
 ---------------
 
+ - NovaSeq changes, new InterOp file format
+
 release 51.11.3
  - seq_alignment: fixes for no target alignment and no target alignment+non-consented human split 
 
