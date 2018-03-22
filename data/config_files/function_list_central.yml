@@ -4,7 +4,6 @@
 - create_summary_link_analysis
 - run_analysis_in_progress
 - lane_analysis_in_progress
-- illumina_basecall_stats
 - p4_stage1_analysis
 - update_warehouse
 - update_ml_warehouse

@@ -212,7 +212,7 @@ has q{is_hiseqx_run} => (isa           => q{Bool},
                          documentation => q{modified to also identify HiSeq 4000 runs which start with HF},);
 sub _build_is_hiseqx_run {
   my ($self) = @_;
-  return $self->run->instrument->name =~ /\AH[XF]|\ANV/xms;
+  return $self->run->instrument->name =~ /\AH[XF]/xms;
 }
 
 =head2 positions
