@@ -1,6 +1,8 @@
 LIST OF CHANGES
 ---------------
 
+ - switched npg_pipeline_seqchksum_comparator to using pre-computed seqchksum files
+ - dropped illumina_basecall_stats function and dropped NovaSeq from is_hiseqx_run
  - NovaSeq changes, new InterOp file format
 
 release 51.11.3
