@@ -52,6 +52,8 @@ Readonly::Hash my %REGISTRY => (
   'seqchksum_comparator'     => {'seqchksum_comparator' => 'create'},
   'archive_to_s3'            => {'s3_archiver' => 'create'},
   'notify_product_delivery'  => {'product_delivery_notifier' => 'create'},
+
+  'qc_illumina_analysis' => {'autoqc' => 'create_illumina_analysis'}
 );
 
 Readonly::Array my @SAVE2FILE_STATUS_FUNCTIONS =>
@@ -99,6 +101,9 @@ sub _build__registry {
     my $new_definition = {};
     $new_definition->{'module'} = (keys   %{$definition})[0];
     $new_definition->{'method'} = (values %{$definition})[0];
+    if ($function_name eq q{qc_illumina_analysis}) {
+      $new_definition->{'params'} = {'qc_to_run' => 'illumina_analysis'};
+    }
     $r->{$function_name} = $new_definition;
   }
 

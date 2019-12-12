@@ -62,6 +62,17 @@ sub _build__check_uses_refrepos {
     ->find_attribute_by_name('repository') ? 1 : 0;
 }
 
+has q{_is_run_level_check} => (
+                                isa        => q{Bool},
+                                is         => q{ro},
+                                required   => 0,
+                                init_arg   => undef,
+                                lazy_build => 1,);
+sub _build__is_run_level_check {
+  my $self = shift;
+  return $self->qc_to_run() =~ /^ illumina_analysis $/smx;
+}
+
 has q{_is_lane_level_check} => (
                                 isa        => q{Bool},
                                 is         => q{ro},
@@ -146,6 +157,25 @@ sub create {
   return \@definitions;
 }
 
+sub create_illumina_analysis {
+  my $self = shift;
+
+  $self->info(sprintf 'Running autoqc check %s for run %i',
+                      $self->qc_to_run(), $self->id_run());
+
+  # make a rpt_list
+  my $rpt_list = join q[;], map {my $c = $_->composition->get_component(0); join q[:], $c->id_run, $c->position} @{$self->products->{lanes}};
+  
+  # create a (run) product
+  my $rp = npg_pipeline::product->new(rpt_list => $rpt_list, selected_lanes => 1);
+
+  # generate a command
+  my $command = $self->_generate_command($rp);
+
+  # create a definition
+  return [$self->_create_definition_object($rp, $command)];
+}
+
 sub _create_definition {
   my ($self, $product, $is_plex) = @_;
 
@@ -209,6 +239,7 @@ sub _generate_command {
   my ($self, $dp) = @_;
 
   my $check     = $self->qc_to_run();
+  my $runfolder_path = $self->runfolder_path;
   my $archive_path = $self->archive_path;
   my $recal_path= $self->recalibrated_path;
   my $dp_archive_path = $dp->path($self->archive_path);
@@ -272,6 +303,9 @@ sub _generate_command {
     }
     $c .= q[ ] . join q[ ], (map {"--qc_in=$_"} (keys %qc_in_roots));
   }
+  elsif(any { /$check/sm } qw( illumina_analysis )) {
+    $c .= qq[ --qc_in=$runfolder_path];
+  }
   else {
     ## default input_files [none?]
   }
@@ -288,6 +322,10 @@ sub _should_run {
   my $rpt_list = $product->rpt_list;
   my $is_pool = $product->lims->is_pool;
   my $is_tag_zero = $product->is_tag_zero_product;
+
+  if ($self->_is_run_level_check()) {
+    return !$is_plex;
+  }
 
   if ($self->_is_lane_level_check()) {
     return !$is_plex;
