@@ -389,7 +389,7 @@ sub _generate_command_params {
     # the first index read
     ($first, $final) = $self->index_read1_cycle_range();
     push @i2b_bc_read, q{1},q{1};
-    push @i2b_first_index_0, qq{$first},$first,$SPLADESEQ_TAG_LENGTH;
+    push @i2b_first_index_0, $first,$SPLADESEQ_TAG_LENGTH;
     push @i2b_final_index_0, $first+$SPLADESEQ_TAG_LENGTH-1,qq{$final};
     push @i2b_bc_seq_val, q{sb},q{BC};
     push @i2b_bc_qual_val, q{qb},q{QT};
