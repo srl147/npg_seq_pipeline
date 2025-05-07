@@ -29,6 +29,8 @@ Readonly::Scalar my $DEFAULT_SPLIT_THREADS_COUNT  => 0; # value passed to samtoo
 Readonly::Scalar my $DUPLEXSEQ_TAG_LENGTH         => 3; # length of Duplex-Seq tag at start of read
 Readonly::Scalar my $DUPLEXSEQ_SKIP_LENGTH        => 4; # Number of bases to skip after the Duplex-Seq tag
 
+Readonly::Scalar my $SPLADESEQ_TAG_LENGTH         => 63; # length of random SPLADE-seq tag at start of first index read
+
 sub generate {
   my $self = shift;
 
@@ -361,6 +363,60 @@ sub _generate_command_params {
     $p4_params{i2b_bc_qual_val}   = join q{,}, @i2b_bc_qual_val;
   }
 
+  if($self->_is_spladeseq($lane_lims)) {
+    $self->info(q{P4 stage1 analysis of a SPLADE-seq lane});
+
+    if (!$self->is_indexed()) {
+      $self->logcroak('A SPLADE-seq lane should be indexed', $position);
+    }
+
+    # The first $SPLADESEQ_TAG_LENGTH bases(quality values) and the start of the first index read are removed and
+    # placed in tags sb(sq)
+
+    my @i2b_bc_read = ();
+    my @i2b_first_0 = ();
+    my @i2b_final_0 = ();
+    my @i2b_first_index_0 = ();
+    my @i2b_final_index_0 = ();
+    my @i2b_bc_seq_val = ();
+    my @i2b_bc_qual_val = ();
+
+    # read 1
+    my($first, $final) = $self->read1_cycle_range();
+    push @i2b_first_0, qq{$first};
+    push @i2b_final_0, qq{$final};
+
+    # the first index read
+    ($first, $final) = $self->index_read1_cycle_range();
+    push @i2b_bc_read, q{1},q{1};
+    push @i2b_first_index_0, qq{$first},$first,$SPLADESEQ_TAG_LENGTH
+    push @i2b_final_index_0, $first+$SPLADESEQ_TAG_LENGTH-1,qq{$final};
+    push @i2b_bc_seq_val, q{sb},q{BC};
+    push @i2b_bc_qual_val, q{qb},q{QT};
+    if($self->is_dual_index()) {
+      # the second index read
+      ($first, $final) = $self->index_read2_cycle_range();
+      push @i2b_bc_read, q{1};
+      push @i2b_first_index_0, qq{$first};
+      push @i2b_final_index_0, qq{$final};
+      push @i2b_bc_seq_val, q{BC};
+      push @i2b_bc_qual_val, q{QT};
+    }
+
+    # read 2
+    ($first, $final) = $self->read2_cycle_range();
+    push @i2b_first_0, qq{$first};
+    push @i2b_final_0, qq{$final};
+
+    $p4_params{i2b_bc_read}       = join q{,}, @i2b_bc_read;
+    $p4_params{i2b_first_0}       = join q{,}, @i2b_first_0;
+    $p4_params{i2b_final_0}       = join q{,}, @i2b_final_0;
+    $p4_params{i2b_first_index_0} = join q{,}, @i2b_first_index_0;
+    $p4_params{i2b_final_index_0} = join q{,}, @i2b_final_index_0;
+    $p4_params{i2b_bc_seq_val}    = join q{,}, @i2b_bc_seq_val;
+    $p4_params{i2b_bc_qual_val}   = join q{,}, @i2b_bc_qual_val;
+  }
+
   ###  TODO: remove this read length comparison if biobambam will handle this case. Check clip reinsertion.
   if($self->is_paired_read()) {
     my @range1 = $self->read1_cycle_range();
@@ -524,6 +580,18 @@ sub _is_duplexseq {
                   $lane_lims->descendants();
 
   return $is_duplexseq;
+}
+
+sub _is_spladeseq {
+  my ( $self, $lane_lims ) = @_;
+
+  # I've restricted this to library_types which exactly match Duplex-Seq to exclude the old library_type Bidirectional Duplex-seq
+  # the Duplex-Seq library prep has been replaced by the NanoSeq library prep, the analysis is the same and the Duplex-Seq library_type is still in use
+  # so there is no need to rename this function but there are two new library_types Targeted NanoSeq Pulldown Twist and Targeted NanoSeq Pulldown Agilent
+  my $is_spladeseq = any {$_->library_type && $_->library_type =~/^SPLADE-seq/smx)}
+                  $lane_lims->descendants();
+
+  return $is_spladeseq;
 }
 
 __PACKAGE__->meta->make_immutable;

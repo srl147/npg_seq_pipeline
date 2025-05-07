@@ -336,7 +336,8 @@ sub _alignment_command { ## no critic (Subroutines::ProhibitExcessComplexity)
   }
 
   my $is_chromium_lib = $l->library_type && ($l->library_type =~ /Chromium/smx);
-  my $do_target_alignment = ($is_chromium_lib or $is_haplotag_lib) ? 0
+  my $is_spladeseq_lib = $l->library_type && ($l->library_type =~ /^SPLADE-seq/smx);
+  my $do_target_alignment = ($is_chromium_lib or $is_spladeseq_lib or $is_haplotag_lib) ? 0
                              : ((not $is_tag_zero_product or $self->align_tag0)
                                && $self->_ref($dp, q[fasta])
                                && ($l->alignments_in_bam || $do_gbs_plex));
